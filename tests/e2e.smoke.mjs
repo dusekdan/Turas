@@ -63,7 +63,12 @@ await tas[1].type('Better sleep\nSave for Spain');
 await clickByText('button', 'Continue'); await sleep(150);
 await clickByText('button', 'Begin the journey'); await sleep(400);
 
-// Home
+// Home — regression: finishing onboarding fired hashchange + turas:navigate
+// together and rendered everything twice
+ok(await page.evaluate(() => document.querySelectorAll('.hero').length === 1),
+  'home renders exactly one hero after onboarding');
+ok(await page.evaluate(() => [...document.querySelectorAll('a')].filter((a) => a.textContent.includes('Evening check-in')).length === 1),
+  'home renders exactly one check-in link after onboarding');
 ok((await text()).includes('Day'), 'home shows streak hero');
 ok((await text()).includes('saved'), 'home shows savings stat');
 ok((await text()).includes('Next up for your body'), 'home shows next milestone');

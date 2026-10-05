@@ -1,7 +1,7 @@
 // Settings: drinks & schedule, goals/mode, pledge & images, treats,
 // notifications, export/import, help, danger zone.
 
-import { el, toast, sheet, fmtMoney } from '../ui.js';
+import { el, toast, sheet, fmtMoney, navigate } from '../ui.js';
 import { getAll, put, remove, getProfile, saveProfile, wipeAll, newId } from '../db.js';
 import { baselineWeekly } from '../calc.js';
 import { editDrink, drinkRow } from './drinkEditor.js';
@@ -214,8 +214,7 @@ function dataCard() {
               await importBackup(json);
               s.close();
               toast('Backup restored ✓');
-              location.hash = '#/home';
-              window.dispatchEvent(new Event('turas:navigate'));
+              navigate('#/home');
             } catch (e) { toast(e.message); }
           } }, 'Replace & restore'))));
     } catch { toast('That file isn’t valid JSON'); }
@@ -240,8 +239,7 @@ function dataCard() {
             el('button', { class: 'btn ghost', onclick: () => s.close() }, 'Keep my data'),
             el('button', { class: 'btn danger', onclick: async () => {
               await wipeAll(); s.close();
-              location.hash = '#/onboarding';
-              window.dispatchEvent(new Event('turas:navigate'));
+              navigate('#/onboarding');
             } }, 'Erase it all'))));
       } }, 'Start over')));
 }

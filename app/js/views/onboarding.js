@@ -1,7 +1,7 @@
 // Onboarding wizard: welcome/disclaimer → mode → drinks baseline → goals →
 // pledge & reasons → start date.
 
-import { el } from '../ui.js';
+import { el, navigate } from '../ui.js';
 import { put, getAll, remove, saveProfile } from '../db.js';
 import { baselineWeekly, dayKey } from '../calc.js';
 import { HSE_WEEKLY } from '../data/presets.js';
@@ -209,8 +209,7 @@ async function startDate(body, _next, back) {
         sosTactics: [],
       };
       await saveProfile(profile);
-      location.hash = '#/home';
-      window.dispatchEvent(new Event('turas:navigate'));
+      navigate('#/home');
     }, back, 'Begin the journey 🌊'),
   );
 }

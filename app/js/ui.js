@@ -31,6 +31,14 @@ export function fmtDateTime(ts) {
   });
 }
 
+/** Navigate to a hash route exactly once. Changing the hash already fires
+ *  `hashchange`; the manual event is only needed when the hash is unchanged.
+ *  Never do both — that renders the view twice. */
+export function navigate(hash) {
+  if (location.hash === hash) window.dispatchEvent(new Event('turas:navigate'));
+  else location.hash = hash;
+}
+
 export function toast(msg, cls = '') {
   const root = document.getElementById('toast-root');
   const t = el('div', { class: `toast ${cls}` }, msg);

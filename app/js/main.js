@@ -29,12 +29,18 @@ const sosFab = document.getElementById('sos-fab');
 sosFab.addEventListener('click', () => { location.hash = '#/sos'; });
 
 let currentView = null;
+let renderSeq = 0;
 
 async function render() {
+  // Guard against overlapping renders (e.g. hashchange + turas:navigate firing
+  // together): only the newest run may clear and mount the view, otherwise the
+  // page content gets appended twice.
+  const seq = ++renderSeq;
   // Let the outgoing view stop its timers etc. — covers the browser/Android
   // back button and tab clicks, not just explicit close buttons.
   if (currentView && typeof currentView.teardown === 'function') currentView.teardown();
   const profile = await getProfile();
+  if (seq !== renderSeq) return;
   let path = (location.hash.replace(/^#/, '') || '/home').split('?')[0];
   if (!profile || !profile.onboarded) path = '/onboarding';
   const view = routes[path] || home;
