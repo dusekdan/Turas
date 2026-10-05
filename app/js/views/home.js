@@ -6,8 +6,9 @@ import {
   dayKey, savings, streakDays, longestStreak, lifetimeStats, splitMilestones,
   currentWeek, baselineWeekly, recentWeeklyAvgStd, pctReduction,
 } from '../calc.js';
-import { MILESTONES, HSE_WEEKLY, BADGES } from '../data/presets.js';
+import { HSE_WEEKLY, BADGES } from '../data/presets.js';
 import { checkThresholds, getEarned } from '../features/achievements.js';
+import { allMilestones } from '../features/milestones.js';
 
 export async function render(root, profile) {
   const [drinks, events, checkins] = await Promise.all([
@@ -46,8 +47,8 @@ export async function render(root, profile) {
     stat(fmtNum(life.totalDays), 'days on journey'),
   ));
 
-  // Next milestone
-  const { next, done } = splitMilestones(MILESTONES, streak);
+  // Next milestone (built-in + the user's own)
+  const { next, done } = splitMilestones(await allMilestones(), streak);
   if (next) {
     root.append(el('div', { class: 'card', style: 'margin-top:14px' },
       el('h3', {}, 'Next up for your body'),

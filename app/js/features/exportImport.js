@@ -5,7 +5,7 @@ import { STORES, getAll, kvGet, kvSet, put, clearStore, openDB } from '../db.js'
 import { markEvent } from './achievements.js';
 
 const EXPORT_VERSION = 1;
-const KV_KEYS = ['profile', 'badges'];
+const KV_KEYS = ['profile', 'badges', 'customMilestones'];
 
 function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {

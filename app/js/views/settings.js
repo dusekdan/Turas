@@ -53,12 +53,17 @@ function goalsCard(root, profile) {
   const budgetIn = el('input', { type: 'number', min: '0', step: '1', value: profile.goals?.weeklyBudget ?? 10 });
   const dfIn = el('input', { type: 'number', min: '0', max: '7', value: profile.goals?.dfDaysTarget ?? 4 });
   const dateIn = el('input', { type: 'date', value: profile.startDate });
+  // Budget targets only make sense when cutting down, not when quitting outright.
+  const targetsRow = el('div', { class: 'row' },
+    el('label', { class: 'field' }, el('span', {}, 'Weekly budget (std drinks)'), budgetIn),
+    el('label', { class: 'field' }, el('span', {}, 'Drink-free days / week'), dfIn));
+  const syncTargets = () => targetsRow.classList.toggle('hidden', modeSel.value !== 'cutdown');
+  modeSel.addEventListener('change', syncTargets);
+  syncTargets();
   return el('div', { class: 'card' },
     el('h2', {}, 'Goal'),
     el('label', { class: 'field' }, el('span', {}, 'Mode'), modeSel),
-    el('div', { class: 'row' },
-      el('label', { class: 'field' }, el('span', {}, 'Weekly budget (std drinks)'), budgetIn),
-      el('label', { class: 'field' }, el('span', {}, 'Drink-free days / week'), dfIn)),
+    targetsRow,
     el('label', { class: 'field' }, el('span', {}, 'Journey start date'), dateIn),
     el('button', { class: 'btn block', onclick: async () => {
       profile.mode = modeSel.value;

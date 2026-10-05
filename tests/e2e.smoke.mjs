@@ -55,9 +55,11 @@ ok((await text()).includes('Pint of stout'), 'drink added and listed');
 ok((await text()).includes('per week'), 'weekly baseline summary shown');
 await clickByText('button', 'Continue'); await sleep(150);
 
-// Step 4 (sex) → 5 (pledge) → 6 (date)
+// Step 4 (sex) → 5 (pledge + reasons) → 6 (date)
 await clickByText('button', 'Continue'); await sleep(150);
 await page.type('textarea', 'For the clear mornings.');
+const tas = await page.$$('textarea');
+await tas[1].type('Better sleep\nSave for Spain');
 await clickByText('button', 'Continue'); await sleep(150);
 await clickByText('button', 'Begin the journey'); await sleep(400);
 
@@ -86,19 +88,59 @@ ok((await text()).includes('Long day, walked past the pub.'), 'trigger saved to 
 await page.goto(`http://localhost:${PORT}/#/checkin`, { waitUntil: 'networkidle0' }); await sleep(200);
 await clickByText('button', 'Done'); await sleep(300);
 
+// Tab bar uses SVG icons (consistent styling, no emoji-presentation lottery)
+ok(await page.evaluate(() => document.querySelectorAll('.tabbar svg.tab-icon').length === 5),
+  'tab bar has 5 SVG icons');
+
 // Progress
 await page.goto(`http://localhost:${PORT}/#/progress`, { waitUntil: 'networkidle0' }); await sleep(300);
 const pTxt = await text();
 ok(pTxt.includes('The whole journey'), 'progress lifetime card renders');
-ok(pTxt.includes('Badges'), 'badge wall renders');
-ok(pTxt.includes('Last 12 weeks'), 'calendar renders');
+ok(pTxt.includes('Last 6 weeks'), 'calendar shows 6-week window');
+
+// Calendar paging: ‹ goes to the past (title becomes a date range), › returns
+await page.evaluate(() => [...document.querySelectorAll('.cal-nav')].find((b) => b.textContent === '‹').click());
+ok(!(await text()).includes('Last 6 weeks'), 'calendar pages back to earlier weeks');
+await page.evaluate(() => [...document.querySelectorAll('.cal-nav')].find((b) => b.textContent === '›').click());
+ok((await text()).includes('Last 6 weeks'), 'calendar pages forward again');
+ok(await page.evaluate(() => [...document.querySelectorAll('.cal-nav')].find((b) => b.textContent === '›').disabled),
+  'forward button disabled at current week');
+
+// Condensed badges + "See all" sheet
+// .badge-sub is uppercased by CSS, so compare case-insensitively
+ok(/recently earned|coming up next/i.test(await text()), 'badges card is condensed');
+ok(await page.evaluate(() => document.querySelectorAll('.badge').length <= 6),
+  'at most 6 badge tiles inline');
+await clickByText('button', 'See all'); await sleep(200);
+ok(await page.evaluate(() => document.querySelectorAll('.sheet .badge').length >= 20),
+  'See all sheet shows the full badge wall');
+await page.evaluate(() => document.querySelector('.sheet-backdrop').click()); await sleep(150);
+
+// Custom milestone
+await clickByText('button', '+ add your own'); await sleep(200);
+await page.evaluate(() => { document.querySelector('.sheet input[type="number"]').value = '2'; });
+await page.type('.sheet input[type="text"]', 'My own big day');
+await clickByText('.sheet button', 'Add'); await sleep(300);
+ok((await text()).includes('My own big day'), 'custom milestone appears in timeline');
 
 // SOS
 await page.goto(`http://localhost:${PORT}/#/sos`, { waitUntil: 'networkidle0' }); await sleep(300);
 const sTxt = await text();
 ok(sTxt.includes('Ride it out'), 'SOS renders');
 ok(sTxt.includes('For the clear mornings.'), 'pledge card shows pledge');
+const backReason = await page.evaluate(() => document.querySelector('.pledge-back-main')?.textContent || '');
+ok(backReason.includes('Better sleep') || backReason.includes('Save for Spain'),
+  'card back shows a quit reason when no images are set');
 await page.evaluate(() => document.querySelector('.pledge-card').click()); await sleep(100);
+
+// Back navigation from SOS must stop its timers (router teardown)
+await page.goto(`http://localhost:${PORT}/#/home`, { waitUntil: 'networkidle0' }); await sleep(200);
+ok(await page.evaluate(async () => {
+  const sos = await import('./js/views/sos.js');
+  return sos.teardown && true;
+}), 'SOS exposes teardown for the router');
+
+await page.goto(`http://localhost:${PORT}/#/sos`, { waitUntil: 'networkidle0' }); await sleep(300);
 await clickByText('button', 'I’m calm now'); await sleep(200);
 await clickByText('.chip', 'Breathing');
 await clickByText('button', 'Done'); await sleep(300);
@@ -106,6 +148,18 @@ await clickByText('button', 'Done'); await sleep(300);
 // Settings renders + export builds
 await page.goto(`http://localhost:${PORT}/#/settings`, { waitUntil: 'networkidle0' }); await sleep(300);
 ok((await text()).includes('Your drinks & old habits'), 'settings renders');
+
+// In quit mode the weekly-budget targets are hidden; switching mode reveals them
+ok(await page.evaluate(() => {
+  const budget = [...document.querySelectorAll('label.field span')].find((s) => s.textContent.includes('Weekly budget'));
+  return budget && budget.closest('.row').classList.contains('hidden');
+}), 'weekly budget hidden in quit mode');
+await page.select('select', 'cutdown'); await sleep(100);
+ok(await page.evaluate(() => {
+  const budget = [...document.querySelectorAll('label.field span')].find((s) => s.textContent.includes('Weekly budget'));
+  return budget && !budget.closest('.row').classList.contains('hidden');
+}), 'weekly budget shown after switching to cut-down');
+await page.select('select', 'abstinence'); await sleep(100);
 const exportObj = await page.evaluate(async () => {
   const m = await import('./js/features/exportImport.js');
   return m.buildExport();

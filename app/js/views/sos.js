@@ -8,12 +8,19 @@ import { markEvent } from '../features/achievements.js';
 
 const TIMER_SECONDS = 20 * 60;
 let timerHandle = null;
+let lineTimer = null;
+
+/** Called by the router when navigating away (close button, back button, tabs). */
+export function teardown() {
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  if (lineTimer) { clearInterval(lineTimer); lineTimer = null; }
+}
 
 export async function render(root, profile) {
   const images = await getAll('images');
 
   root.append(el('button', {
-    class: 'linklike', style: 'float:right', onclick: () => { cleanup(); location.hash = '#/home'; },
+    class: 'linklike', style: 'float:right', onclick: () => { location.hash = '#/home'; },
   }, '✕ close'));
   root.append(el('h1', {}, 'Ride it out'),
     el('p', { class: 'muted' }, 'Cravings peak and pass — almost always within 20 minutes. Stay here with us.'));
@@ -30,7 +37,7 @@ export async function render(root, profile) {
   const scriptLine = el('p', { class: 'muted', style: 'text-align:center;min-height:3.2em;font-style:italic' }, URGE_SCRIPT[0]);
   root.append(scriptLine);
   let lineIdx = 0;
-  const lineTimer = setInterval(() => {
+  lineTimer = setInterval(() => {
     lineIdx = (lineIdx + 1) % URGE_SCRIPT.length;
     scriptLine.style.opacity = 0;
     setTimeout(() => { scriptLine.textContent = URGE_SCRIPT[lineIdx]; scriptLine.style.opacity = 1; }, 300);
@@ -44,10 +51,8 @@ export async function render(root, profile) {
 
   root.append(el('button', {
     class: 'btn block', style: 'margin-top:24px',
-    onclick: () => { clearInterval(lineTimer); calmFlow(root, profile); },
+    onclick: () => { teardown(); calmFlow(root, profile); },
   }, '🕊️ I’m calm now'));
-
-  function cleanup() { clearInterval(lineTimer); if (timerHandle) clearInterval(timerHandle); }
 }
 
 /* ---------- 20-minute ring ---------- */
@@ -85,42 +90,58 @@ function buildTimer() {
 function buildPledgeCard(profile, images) {
   const reasons = (profile.reasons || []);
   const pledgeText = profile.pledge || 'I choose how this story goes.';
+  const urls = images.map((im) => im.blob ? URL.createObjectURL(im.blob) : im.url);
 
-  const backImg = el('img', { alt: '' });
-  const backFallback = el('div', {
-    class: 'pledge-text',
-    style: 'color:#fff;background:var(--accent-grad);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px',
-  }, reasons.length ? `“${reasons[(Math.random() * reasons.length) | 0]}”` : '🌊');
+  // Back face: card-coloured bands top & bottom; image (if any) in between,
+  // with a reason in the bottom band. No images → the reason takes centre stage.
+  const backImg = el('img', { alt: '', class: urls.length ? '' : 'hidden' });
+  const bigReason = el('div', { class: `pledge-text pledge-back-main ${urls.length ? 'hidden' : ''}` });
+  const bottomReason = el('div', { class: 'pledge-back-reason' });
+  const back = el('div', { class: 'pledge-face back' },
+    el('div', { class: 'pledge-band' }),
+    backImg,
+    bigReason,
+    el('div', { class: 'pledge-band' }, bottomReason),
+  );
 
   const card = el('div', { class: 'pledge-card' },
     el('div', { class: 'pledge-face front' },
       el('span', { class: 'corner tl' }, 'T♥'),
       el('div', { class: 'pledge-text' }, pledgeText),
-      reasons.length ? el('div', { style: 'margin-top:14px;font-size:.82rem;opacity:.85' },
-        reasons.slice(0, 3).map((r) => el('div', {}, `· ${r}`))) : null,
       el('span', { class: 'corner br' }, 'T♥'),
     ),
-    el('div', { class: 'pledge-face back' }, backImg, backFallback),
+    back,
   );
 
-  let flips = 0;
-  let imgIdx = Math.floor(Math.random() * Math.max(1, images.length));
-  const urls = images.map((im) => im.blob ? URL.createObjectURL(im.blob) : im.url);
-
-  function setBackImage() {
-    if (!urls.length) { backImg.style.display = 'none'; backFallback.style.display = 'flex'; return; }
-    backFallback.style.display = 'none';
-    backImg.style.display = 'block';
-    backImg.src = urls[imgIdx % urls.length];
-    imgIdx++;
+  let imgIdx = Math.floor(Math.random() * Math.max(1, urls.length));
+  let lastReason = -1;
+  function nextReason() {
+    if (!reasons.length) return '🌊 One wave at a time.';
+    if (reasons.length === 1) return `“${reasons[0]}”`;
+    let i;
+    do { i = (Math.random() * reasons.length) | 0; } while (i === lastReason);
+    lastReason = i;
+    return `“${reasons[i]}”`;
   }
-  setBackImage();
+  function refreshBack() {
+    const reason = nextReason();
+    if (urls.length) {
+      backImg.src = urls[imgIdx % urls.length];
+      imgIdx++;
+      bottomReason.textContent = reason;
+    } else {
+      bigReason.textContent = reason;
+      bottomReason.textContent = '';
+    }
+  }
+  refreshBack();
 
+  let flips = 0;
   card.addEventListener('click', () => {
     flips++;
     if (flips % 2 === 0) {
-      // Returning to pledge; preload the next image for the following flip.
-      setTimeout(setBackImage, 700);
+      // Returning to the pledge; swap in the next image/reason mid-flip.
+      setTimeout(refreshBack, 700);
     }
     const wobble = (Math.random() * 10 - 5).toFixed(1);
     card.style.transform = `rotateY(${flips * 180}deg) rotateZ(${flips % 2 ? wobble : 0}deg)`;

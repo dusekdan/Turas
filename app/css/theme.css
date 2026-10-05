@@ -82,8 +82,16 @@ small, .muted { color: var(--ink-soft); }
   font-weight: 600;
   letter-spacing: .02em;
 }
-.tabbar a .tab-icon { font-size: 1.25rem; line-height: 1; }
+.tabbar a .tab-icon {
+  width: 22px; height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .tabbar a.active { color: var(--accent); }
+.tabbar a.active .tab-icon { stroke-width: 2.4; }
 
 /* SOS floating button */
 .sos-fab {

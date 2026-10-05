@@ -1,5 +1,5 @@
 /* Turas service worker — cache-first for full offline use. */
-const CACHE = 'turas-v1';
+const CACHE = 'turas-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const ASSETS = [
   './js/features/achievements.js',
   './js/features/exportImport.js',
   './js/features/notifications.js',
+  './js/features/milestones.js',
   './js/views/drinkEditor.js',
   './js/views/onboarding.js',
   './js/views/home.js',

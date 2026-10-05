@@ -28,11 +28,17 @@ const sosFab = document.getElementById('sos-fab');
 
 sosFab.addEventListener('click', () => { location.hash = '#/sos'; });
 
+let currentView = null;
+
 async function render() {
+  // Let the outgoing view stop its timers etc. — covers the browser/Android
+  // back button and tab clicks, not just explicit close buttons.
+  if (currentView && typeof currentView.teardown === 'function') currentView.teardown();
   const profile = await getProfile();
   let path = (location.hash.replace(/^#/, '') || '/home').split('?')[0];
   if (!profile || !profile.onboarded) path = '/onboarding';
   const view = routes[path] || home;
+  currentView = view;
 
   const chrome = path !== '/onboarding' && path !== '/sos';
   tabbar.classList.toggle('hidden', path === '/onboarding');
