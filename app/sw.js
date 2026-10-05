@@ -1,5 +1,5 @@
 /* Turas service worker — cache-first for full offline use. */
-const CACHE = 'turas-v2';
+const CACHE = 'turas-v3';
 const ASSETS = [
   './',
   './index.html',
