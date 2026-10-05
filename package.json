@@ -1,0 +1,9 @@
+{
+  "name": "turas",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/calc.test.mjs",
+    "serve": "python3 -m http.server 8080 --directory app"
+  }
+}
